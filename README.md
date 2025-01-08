@@ -10,7 +10,11 @@
 
 </div>
 
-**Note**: This is a somewhat experimental crate written mainly for use in
-[bottom](https://github.com/ClementTsang/bottom).
-
 ## Usage
+
+**Note**: This is a somewhat experimental crate written mainly for use in
+[bottom](https://github.com/ClementTsang/bottom). You've been warned.
+
+## Licensing
+
+This crate is dual-licensed under Apache 2.0 and MIT.
