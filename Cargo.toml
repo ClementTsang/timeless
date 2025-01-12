@@ -1,6 +1,6 @@
 [package]
 name = "timeless"
-version = "0.0.2-alpha"
+version = "0.0.3-alpha"
 edition = "2021"
 authors = ["Clement Tsang <cjhtsang@uwaterloo.ca>"]
 license = "MIT OR Apache-2.0"

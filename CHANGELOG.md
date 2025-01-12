@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.3-alpha - 2025-01-11
+
+### Features
+
+- Add `Debug` trait to relevant types.
+
 ## v0.0.2-alpha - 2025-01-11
 
 ### Changes
