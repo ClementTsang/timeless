@@ -20,6 +20,7 @@ impl<T> DataChunk<T> {
     // }
 }
 
+/// An iterator created from a [`ChunkedData`].
 pub struct ChunkedDataIter<I: Iterator> {
     iter: I,
     size: usize,
