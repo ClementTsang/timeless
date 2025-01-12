@@ -1,6 +1,6 @@
 [package]
 name = "timeless"
-version = "0.0.0"
+version = "0.0.1-alpha"
 edition = "2021"
 authors = ["Clement Tsang <cjhtsang@uwaterloo.ca>"]
 license = "MIT OR Apache-2.0"
@@ -17,6 +17,7 @@ doctest = true
 doc = true
 
 [dependencies]
+# No dependencies!
 
 [lints.rust]
 rust_2018_idioms = "deny"
