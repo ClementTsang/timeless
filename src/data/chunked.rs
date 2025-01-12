@@ -43,14 +43,15 @@ impl<T, I: Iterator<Item = T>> ExactSizeIterator for ChunkedDataIter<I> {
 /// If you expect that you may want to store time values but _not_
 /// data values, use this to avoid storing blanks.
 #[derive(Default)]
-pub struct ChunkedData<T> {
+pub struct ChunkedData<D> {
     next_index: usize,
     is_active: bool,
-    chunks: Vec<DataChunk<T>>,
+    chunks: Vec<DataChunk<D>>,
 }
 
-impl<T> ChunkedData<T> {
-    pub fn iter_index(&self) -> ChunkedDataIter<impl Iterator<Item = (usize, &T)>> {
+impl<D> ChunkedData<D> {
+    /// Returns an iterator of items alongside the associated indices for each item.
+    pub fn iter_with_index(&self) -> ChunkedDataIter<impl Iterator<Item = (usize, &D)>> {
         let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
         let iter = self.chunks.iter().flat_map(|dc| {
             let start = dc.start_offset;
@@ -64,11 +65,40 @@ impl<T> ChunkedData<T> {
         ChunkedDataIter { iter, size }
     }
 
-    pub fn iter(&self) -> ChunkedDataIter<impl Iterator<Item = &T>> {
+    /// Returns an iterator of items.
+    pub fn iter(&self) -> ChunkedDataIter<impl Iterator<Item = &D>> {
         let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
         let iter = self.chunks.iter().flat_map(|dc| dc.data.iter());
 
         ChunkedDataIter { iter, size }
+    }
+
+    /// Given a slice that serves as the "base" yielding items `T`, return an iterator of `(T, D)`, where each `D` from
+    /// the [`ChunkedData`] has its index associated with that of `base_slice`.
+    ///
+    /// This is meant to be used alongside a slice of time values.
+    ///
+    /// Note this will return [`None`] if the base slice's length is smaller than that of the [`ChunkedData`].
+    pub fn iter_along_base<'a, T>(
+        &'a self, base_slice: &'a [T],
+    ) -> Option<ChunkedDataIter<impl Iterator<Item = (&'a T, &'a D)>>> {
+        if base_slice.len() < self.length() {
+            return None;
+        }
+
+        let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
+        let iter = self.chunks.iter().flat_map(move |dc| {
+            let start = dc.start_offset;
+
+            dc.data.iter().enumerate().map(move |(offset, datum)| {
+                let actual_index = start + offset;
+                let base = &base_slice[actual_index];
+
+                (base, datum)
+            })
+        });
+
+        Some(ChunkedDataIter { iter, size })
     }
 
     /// Return how many elements actually are stored in the [`ChunkedData`].
@@ -84,7 +114,7 @@ impl<T> ChunkedData<T> {
 
     /// Push an element. If `item` is [`None`], then it will automatically
     /// insert a break in the chunk if needed.
-    pub fn push(&mut self, item: Option<T>) {
+    pub fn push(&mut self, item: Option<D>) {
         match item {
             Some(item) => {
                 if self.is_active {
@@ -174,7 +204,7 @@ mod tests {
 
         assert!(!data.is_active);
         assert_eq!(data.chunks.len(), 1);
-        assert_eq!(data.chunks.get(0).unwrap().data, vec![1, 2]);
+        assert_eq!(data.chunks.first().unwrap().data, vec![1, 2]);
         assert_eq!(data.next_index, 3);
 
         data.push(None);
@@ -234,7 +264,10 @@ mod tests {
         assert!(data.prune(to_prune_index).is_ok());
 
         let removed = to_prune_index + 1;
-        let result = data.iter_index().map(|(a, b)| (a, *b)).collect::<Vec<_>>();
+        let result = data
+            .iter_with_index()
+            .map(|(a, b)| (a, *b))
+            .collect::<Vec<_>>();
 
         let expected = POPULATION
             .into_iter()
