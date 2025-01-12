@@ -112,32 +112,44 @@ impl<D> ChunkedData<D> {
         self.next_index
     }
 
-    /// Push an element. If `item` is [`None`], then it will automatically
-    /// insert a break in the chunk if needed.
-    pub fn push(&mut self, item: Option<D>) {
-        match item {
-            Some(item) => {
-                if self.is_active {
-                    let current_chunk = self.chunks.last_mut().expect(
-                        "chunks must be initialized with at least a value if is_active is set",
-                    );
-                    current_chunk.push(item);
-                } else {
-                    // Start a new chunk.
-                    self.chunks.push(DataChunk {
-                        start_offset: self.next_index,
-                        data: vec![item],
-                    });
-                    self.is_active = true;
-                }
-            }
-            None => {
-                // "Seal" the latest chunk.
-                self.is_active = false;
-            }
+    /// Push an element.
+    pub fn push(&mut self, item: D) {
+        if self.is_active {
+            let current_chunk = self
+                .chunks
+                .last_mut()
+                .expect("chunks must be initialized with at least a value if is_active is set");
+            current_chunk.push(item);
+        } else {
+            // Start a new chunk.
+            self.chunks.push(DataChunk {
+                start_offset: self.next_index,
+                data: vec![item],
+            });
+            self.is_active = true;
         }
 
         self.next_index += 1;
+    }
+
+    /// Manually mark that a break is needed in the chunk.
+    pub fn insert_break(&mut self) {
+        // "Seal" the latest chunk.
+        self.is_active = false;
+    }
+
+    /// Push an element. If `item` is [`None`], then it will automatically
+    /// insert a break in the chunk if needed.
+    pub fn try_push(&mut self, item: Option<D>) {
+        match item {
+            Some(item) => {
+                self.push(item);
+            }
+            None => {
+                self.insert_break();
+                self.next_index += 1;
+            }
+        }
     }
 
     /// Remove all elements up to (and including) `index`, including "skipped"
@@ -192,26 +204,26 @@ mod tests {
     fn chunked_push() {
         let mut data = ChunkedData::default();
 
-        data.push(Some(1));
+        data.try_push(Some(1));
 
         assert!(!data.chunks.is_empty());
         assert!(data.is_active);
         assert_eq!(data.chunks.last().as_ref().unwrap().data, vec![1]);
         assert_eq!(data.next_index, 1);
 
-        data.push(Some(2));
-        data.push(None);
+        data.try_push(Some(2));
+        data.try_push(None);
 
         assert!(!data.is_active);
         assert_eq!(data.chunks.len(), 1);
         assert_eq!(data.chunks.first().unwrap().data, vec![1, 2]);
         assert_eq!(data.next_index, 3);
 
-        data.push(None);
+        data.try_push(None);
         assert!(!data.is_active);
         assert_eq!(data.next_index, 4);
 
-        data.push(Some(3));
+        data.try_push(Some(3));
         assert!(data.is_active);
         assert_eq!(data.chunks.last().as_ref().unwrap().data, vec![3]);
         assert_eq!(data.next_index, 5);
@@ -226,10 +238,10 @@ mod tests {
     fn chunked_empty_initial_push() {
         let mut data: ChunkedData<u64> = ChunkedData::default();
 
-        data.push(None);
+        data.try_push(None);
         assert!(!data.is_active);
 
-        data.push(Some(1));
+        data.try_push(Some(1));
         assert!(data.is_active);
         assert_eq!(data.next_index, 2);
     }
@@ -249,7 +261,7 @@ mod tests {
 
     fn test_populate(data: &mut ChunkedData<u64>) {
         for p in POPULATION {
-            data.push(p);
+            data.try_push(p);
         }
     }
 
@@ -313,6 +325,6 @@ mod tests {
     fn chunked_prune_without_curr() {
         let mut data = ChunkedData::default();
         test_populate(&mut data);
-        data.push(None);
+        data.try_push(None);
     }
 }

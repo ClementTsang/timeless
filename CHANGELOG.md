@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.4-alpha - 2025-01-11
+
+### Changes
+
+- `push` has been renamed to `try_push`; `push` now only accepts a value of type `D`.
+
+### Features
+
+- Some extra functions added for more fine-grain control.
+
 ## v0.0.3-alpha - 2025-01-11
 
 ### Features
