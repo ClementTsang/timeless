@@ -1,6 +1,6 @@
 //! This is code responsible for possibly chunked data.
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 struct DataChunk<T> {
     /// The start offset of this chunk, should correspond to the time vector
     /// indices. If that updates, this MUST also update.
@@ -42,7 +42,7 @@ impl<T, I: Iterator<Item = T>> ExactSizeIterator for ChunkedDataIter<I> {
 /// A struct representing data that may potentially have breaks.
 /// If you expect that you may want to store time values but _not_
 /// data values, use this to avoid storing blanks.
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct ChunkedData<D> {
     next_index: usize,
     is_active: bool,
