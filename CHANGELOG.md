@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.5-alpha - 2025-01-12
+
+### Changes
+
+- Enable `clone`.
+
 ## v0.0.4-alpha - 2025-01-11
 
 ### Changes
