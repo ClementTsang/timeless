@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.6-alpha - 2025-01-16
+
+### Bugs
+
+- Fix bug around pruning indices that are low causing a subtraction underflow.
+
 ## v0.0.5-alpha - 2025-01-12
 
 ### Changes

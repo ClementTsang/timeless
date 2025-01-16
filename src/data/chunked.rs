@@ -14,10 +14,6 @@ impl<T> DataChunk<T> {
     fn push(&mut self, item: T) {
         self.data.push(item)
     }
-
-    // fn is_empty(&self) -> bool {
-    //     self.data.is_empty()
-    // }
 }
 
 /// An iterator created from a [`ChunkedData`].
@@ -165,8 +161,20 @@ impl<D> ChunkedData<D> {
         }
 
         let dc_index = match self.chunks.binary_search_by(|c| c.start_offset.cmp(&index)) {
-            Ok(index) => index,
-            Err(index) => index - 1,
+            Ok(result) => result,
+            Err(result) => {
+                if result > 0 {
+                    result - 1
+                } else {
+                    // Nothing to prune. We still need to change the offsets though.
+                    self.next_index -= index + 1;
+                    for chunk in &mut self.chunks {
+                        chunk.start_offset -= index + 1;
+                    }
+
+                    return Ok(());
+                }
+            }
         };
 
         // SAFETY: This index must be valid since it was returned from the binary search.
@@ -327,5 +335,33 @@ mod tests {
         let mut data = ChunkedData::default();
         test_populate(&mut data);
         data.try_push(None);
+
+        assert!(data.prune(10).is_ok());
+    }
+
+    #[test]
+    fn prune_zero_when_none() {
+        let mut data = ChunkedData::default();
+        data.try_push(None);
+        data.try_push(None);
+        data.try_push(None);
+        test_populate(&mut data);
+
+        assert!(data.prune(0).is_ok());
+        assert_eq!(data.chunks[0].start_offset, 2);
+        assert_eq!(data.chunks[1].start_offset, 8);
+
+        assert!(data.prune(0).is_ok());
+        assert_eq!(data.chunks[0].start_offset, 1);
+        assert_eq!(data.chunks[1].start_offset, 7);
+
+        assert!(data.prune(0).is_ok());
+        assert_eq!(data.chunks[0].start_offset, 0);
+        assert_eq!(data.chunks[1].start_offset, 6);
+
+        assert!(data.prune(0).is_ok());
+        assert_eq!(data.chunks[0].start_offset, 0);
+        assert_eq!(data.chunks[0].data.as_slice(), &[2, 3]);
+        assert_eq!(data.chunks[1].start_offset, 5);
     }
 }
