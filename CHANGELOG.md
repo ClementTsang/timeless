@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.7-alpha - 2025-01-17
+
+### Bugs
+
+- Fix bug around setting next index internally after pruning
+
 ## v0.0.6-alpha - 2025-01-16
 
 ### Bugs

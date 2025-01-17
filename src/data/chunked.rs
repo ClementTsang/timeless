@@ -160,6 +160,8 @@ impl<D> ChunkedData<D> {
             return Err(self.next_index);
         }
 
+        self.next_index -= index + 1;
+
         let dc_index = match self.chunks.binary_search_by(|c| c.start_offset.cmp(&index)) {
             Ok(result) => result,
             Err(result) => {
@@ -167,7 +169,6 @@ impl<D> ChunkedData<D> {
                     result - 1
                 } else {
                     // Nothing to prune. We still need to change the offsets though.
-                    self.next_index -= index + 1;
                     for chunk in &mut self.chunks {
                         chunk.start_offset -= index + 1;
                     }
@@ -298,6 +299,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(result, expected);
+        assert_eq!(data.next_index, POPULATION.len() - (to_prune_index + 1));
     }
 
     #[test]
@@ -350,18 +352,22 @@ mod tests {
         assert!(data.prune(0).is_ok());
         assert_eq!(data.chunks[0].start_offset, 2);
         assert_eq!(data.chunks[1].start_offset, 8);
+        assert_eq!(data.next_index, POPULATION.len() + 3 - 1);
 
         assert!(data.prune(0).is_ok());
         assert_eq!(data.chunks[0].start_offset, 1);
         assert_eq!(data.chunks[1].start_offset, 7);
+        assert_eq!(data.next_index, POPULATION.len() + 3 - 2);
 
         assert!(data.prune(0).is_ok());
         assert_eq!(data.chunks[0].start_offset, 0);
         assert_eq!(data.chunks[1].start_offset, 6);
+        assert_eq!(data.next_index, POPULATION.len() + 3 - 3);
 
         assert!(data.prune(0).is_ok());
         assert_eq!(data.chunks[0].start_offset, 0);
         assert_eq!(data.chunks[0].data.as_slice(), &[2, 3]);
         assert_eq!(data.chunks[1].start_offset, 5);
+        assert_eq!(data.next_index, POPULATION.len() + 3 - 4);
     }
 }
