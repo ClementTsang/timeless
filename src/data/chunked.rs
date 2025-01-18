@@ -214,6 +214,11 @@ impl<D> ChunkedData<D> {
     pub fn last(&self) -> Option<&D> {
         self.chunks.last().and_then(|chunk| chunk.data.last())
     }
+
+    /// Return whether there are zero elements left stored internally.
+    pub fn no_elements(&self) -> bool {
+        self.num_elements() == 0
+    }
 }
 
 #[cfg(test)]
