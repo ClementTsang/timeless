@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.8-alpha - 2025-01-18
+
+### Features
+
+- Add `last` and `first` functions for convenience.
+
 ## v0.0.7-alpha - 2025-01-17
 
 ### Bugs

@@ -204,6 +204,16 @@ impl<D> ChunkedData<D> {
 
         Ok(())
     }
+
+    /// Try and return the first element.
+    pub fn first(&self) -> Option<&D> {
+        self.chunks.first().and_then(|chunk| chunk.data.first())
+    }
+
+    /// Try and return the last element.
+    pub fn last(&self) -> Option<&D> {
+        self.chunks.last().and_then(|chunk| chunk.data.last())
+    }
 }
 
 #[cfg(test)]
@@ -369,5 +379,14 @@ mod tests {
         assert_eq!(data.chunks[0].data.as_slice(), &[2, 3]);
         assert_eq!(data.chunks[1].start_offset, 5);
         assert_eq!(data.next_index, POPULATION.len() + 3 - 4);
+    }
+
+    #[test]
+    fn first_last() {
+        let mut data = ChunkedData::default();
+        test_populate(&mut data);
+
+        assert_eq!(data.first(), Some(&1));
+        assert_eq!(data.last(), Some(&10));
     }
 }
