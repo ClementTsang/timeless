@@ -288,7 +288,7 @@ mod tests {
     /// Initialize data, prune, and insert.
     #[track_caller]
     fn test_pruning(to_prune_index: usize) {
-        println!("Trying to prune up to index {to_prune_index}...");
+        // println!("Trying to prune up to index {to_prune_index}...");
 
         let mut data = ChunkedData::default();
         test_populate(&mut data);
