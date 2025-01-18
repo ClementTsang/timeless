@@ -17,12 +17,12 @@ impl<T> DataChunk<T> {
 }
 
 /// An iterator created from a [`ChunkedData`].
-pub struct ChunkedDataIter<I: Iterator> {
+pub struct ChunkedDataIter<I: Iterator + DoubleEndedIterator> {
     iter: I,
     size: usize,
 }
 
-impl<T, I: Iterator<Item = T>> Iterator for ChunkedDataIter<I> {
+impl<T, I: Iterator<Item = T> + DoubleEndedIterator> Iterator for ChunkedDataIter<I> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -30,9 +30,15 @@ impl<T, I: Iterator<Item = T>> Iterator for ChunkedDataIter<I> {
     }
 }
 
-impl<T, I: Iterator<Item = T>> ExactSizeIterator for ChunkedDataIter<I> {
+impl<T, I: Iterator<Item = T> + DoubleEndedIterator> ExactSizeIterator for ChunkedDataIter<I> {
     fn len(&self) -> usize {
         self.size
+    }
+}
+
+impl<T, I: Iterator<Item = T> + DoubleEndedIterator> DoubleEndedIterator for ChunkedDataIter<I> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back()
     }
 }
 
@@ -48,7 +54,9 @@ pub struct ChunkedData<D> {
 
 impl<D> ChunkedData<D> {
     /// Returns an iterator of items alongside the associated indices for each item.
-    pub fn iter_with_index(&self) -> ChunkedDataIter<impl Iterator<Item = (usize, &D)>> {
+    pub fn iter_with_index(
+        &self,
+    ) -> ChunkedDataIter<impl Iterator<Item = (usize, &D)> + DoubleEndedIterator> {
         let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
         let iter = self.chunks.iter().flat_map(|dc| {
             let start = dc.start_offset;
@@ -63,9 +71,17 @@ impl<D> ChunkedData<D> {
     }
 
     /// Returns an iterator of items.
-    pub fn iter(&self) -> ChunkedDataIter<impl Iterator<Item = &D>> {
+    pub fn iter(&self) -> ChunkedDataIter<impl Iterator<Item = &D> + DoubleEndedIterator> {
         let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
         let iter = self.chunks.iter().flat_map(|dc| dc.data.iter());
+
+        ChunkedDataIter { iter, size }
+    }
+
+    /// Returns an iterator of owned items. This consumes the [`ChunkedData`].
+    pub fn into_iter(self) -> ChunkedDataIter<impl Iterator<Item = D> + DoubleEndedIterator> {
+        let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
+        let iter = self.chunks.into_iter().flat_map(|dc| dc.data.into_iter());
 
         ChunkedDataIter { iter, size }
     }
@@ -78,7 +94,7 @@ impl<D> ChunkedData<D> {
     /// Note this will return [`None`] if the base slice's length is smaller than that of the [`ChunkedData`].
     pub fn iter_along_base<'a, T>(
         &'a self, base_slice: &'a [T],
-    ) -> Option<ChunkedDataIter<impl Iterator<Item = (&'a T, &'a D)>>> {
+    ) -> Option<ChunkedDataIter<impl Iterator<Item = (&'a T, &'a D)> + DoubleEndedIterator>> {
         if base_slice.len() < self.length() {
             return None;
         }
@@ -228,6 +244,7 @@ mod tests {
     #[test]
     fn chunked_push() {
         let mut data = ChunkedData::default();
+        assert!(data.no_elements());
 
         data.try_push(Some(1));
 
@@ -393,5 +410,31 @@ mod tests {
 
         assert_eq!(data.first(), Some(&1));
         assert_eq!(data.last(), Some(&10));
+    }
+
+    #[test]
+    fn iter() {
+        let mut data = ChunkedData::default();
+        test_populate(&mut data);
+
+        assert_eq!(
+            data.into_iter().collect::<Vec<_>>(),
+            POPULATION.iter().filter_map(|v| *v).collect::<Vec<_>>(),
+        );
+    }
+
+    #[test]
+    fn reverse_iter() {
+        let mut data = ChunkedData::default();
+        test_populate(&mut data);
+
+        assert_eq!(
+            data.into_iter().rev().collect::<Vec<_>>(),
+            POPULATION
+                .iter()
+                .filter_map(|v| *v)
+                .rev()
+                .collect::<Vec<_>>(),
+        );
     }
 }
