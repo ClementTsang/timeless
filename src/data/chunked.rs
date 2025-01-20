@@ -213,10 +213,23 @@ impl<D> ChunkedData<D> {
             // Drain this chunk too.
             self.chunks.drain(0..=dc_index);
 
-            for chunk in self.chunks.iter_mut() {
+            for chunk in &mut self.chunks {
                 chunk.start_offset -= to_remove;
             }
         }
+
+        Ok(())
+    }
+
+    /// Prune and shrink the [`ChunkedData`] after.
+    pub fn prune_and_shrink_to_fit(&mut self, index: usize) -> Result<(), usize> {
+        self.prune(index)?;
+
+        for chunk in &mut self.chunks {
+            chunk.data.shrink_to_fit();
+        }
+
+        self.chunks.shrink_to_fit();
 
         Ok(())
     }

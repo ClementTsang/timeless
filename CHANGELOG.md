@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.11-alpha - 2025-01-20
+
+### Features
+
+- Add a helper function to additionally shrink the chunk.
+
 ## v0.0.10-alpha - 2025-01-18
 
 ### Features
