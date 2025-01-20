@@ -221,15 +221,19 @@ impl<D> ChunkedData<D> {
         Ok(())
     }
 
-    /// Prune and shrink the [`ChunkedData`] after.
-    pub fn prune_and_shrink_to_fit(&mut self, index: usize) -> Result<(), usize> {
-        self.prune(index)?;
-
+    /// Shrink the [`ChunkedData`] after.
+    pub fn shrink_to_fit(&mut self) {
         for chunk in &mut self.chunks {
             chunk.data.shrink_to_fit();
         }
 
         self.chunks.shrink_to_fit();
+    }
+
+    /// Convenience function to prune _and_ shrink the [`ChunkedData`] after.
+    pub fn prune_and_shrink_to_fit(&mut self, index: usize) -> Result<(), usize> {
+        self.prune(index)?;
+        self.shrink_to_fit();
 
         Ok(())
     }
