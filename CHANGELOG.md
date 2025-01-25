@@ -7,6 +7,10 @@ Versioning for this project is based on [Semantic Versioning](https://semver.org
 
 ## v0.0.13-alpha - 2025-01-25
 
+### Changes
+
+- Renamed the `into_iter` function to `into_owned_iter` to avoid confusion.
+
 ### Bugs
 
 Fix a bunch of clippy warnings.

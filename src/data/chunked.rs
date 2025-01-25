@@ -79,7 +79,7 @@ impl<D> ChunkedData<D> {
     /// Returns an iterator of owned items. This consumes the [`ChunkedData`].
     ///
     /// Note this is currently not just `into_iter` due to how it's implemented, this is subject to change.
-    pub fn to_owned_iter(self) -> ChunkedDataIter<impl DoubleEndedIterator<Item = D>> {
+    pub fn into_owned_iter(self) -> ChunkedDataIter<impl DoubleEndedIterator<Item = D>> {
         let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
         let iter = self.chunks.into_iter().flat_map(|dc| dc.data.into_iter());
 
@@ -435,7 +435,7 @@ mod tests {
         test_populate(&mut data);
 
         assert_eq!(
-            data.into_iter().collect::<Vec<_>>(),
+            data.into_owned_iter().collect::<Vec<_>>(),
             POPULATION.iter().filter_map(|v| *v).collect::<Vec<_>>(),
         );
     }
@@ -446,7 +446,7 @@ mod tests {
         test_populate(&mut data);
 
         assert_eq!(
-            data.into_iter().rev().collect::<Vec<_>>(),
+            data.into_owned_iter().rev().collect::<Vec<_>>(),
             POPULATION
                 .iter()
                 .filter_map(|v| *v)
