@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.13-alpha - 2025-01-25
+
+### Bugs
+
+Fix a bunch of clippy warnings.
+
 ## v0.0.12-alpha - 2025-01-20
 
 ### Features

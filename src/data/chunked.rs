@@ -54,9 +54,7 @@ pub struct ChunkedData<D> {
 
 impl<D> ChunkedData<D> {
     /// Returns an iterator of items alongside the associated indices for each item.
-    pub fn iter_with_index(
-        &self,
-    ) -> ChunkedDataIter<impl Iterator<Item = (usize, &D)> + DoubleEndedIterator> {
+    pub fn iter_with_index(&self) -> ChunkedDataIter<impl DoubleEndedIterator<Item = (usize, &D)>> {
         let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
         let iter = self.chunks.iter().flat_map(|dc| {
             let start = dc.start_offset;
@@ -71,7 +69,7 @@ impl<D> ChunkedData<D> {
     }
 
     /// Returns an iterator of items.
-    pub fn iter(&self) -> ChunkedDataIter<impl Iterator<Item = &D> + DoubleEndedIterator> {
+    pub fn iter(&self) -> ChunkedDataIter<impl DoubleEndedIterator<Item = &D>> {
         let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
         let iter = self.chunks.iter().flat_map(|dc| dc.data.iter());
 
@@ -79,7 +77,9 @@ impl<D> ChunkedData<D> {
     }
 
     /// Returns an iterator of owned items. This consumes the [`ChunkedData`].
-    pub fn into_iter(self) -> ChunkedDataIter<impl Iterator<Item = D> + DoubleEndedIterator> {
+    ///
+    /// Note this is currently not just `into_iter` due to how it's implemented, this is subject to change.
+    pub fn to_owned_iter(self) -> ChunkedDataIter<impl DoubleEndedIterator<Item = D>> {
         let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
         let iter = self.chunks.into_iter().flat_map(|dc| dc.data.into_iter());
 
@@ -94,7 +94,7 @@ impl<D> ChunkedData<D> {
     /// Note this will return [`None`] if the base slice's length is smaller than that of the [`ChunkedData`].
     pub fn iter_along_base<'a, T>(
         &'a self, base_slice: &'a [T],
-    ) -> Option<ChunkedDataIter<impl Iterator<Item = (&'a T, &'a D)> + DoubleEndedIterator>> {
+    ) -> Option<ChunkedDataIter<impl DoubleEndedIterator<Item = (&'a T, &'a D)>>> {
         if base_slice.len() < self.length() {
             return None;
         }
