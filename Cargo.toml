@@ -1,6 +1,6 @@
 [package]
 name = "timeless"
-version = "0.0.13-alpha"
+version = "0.0.14-alpha"
 edition = "2021"
 authors = ["Clement Tsang <cjhtsang@uwaterloo.ca>"]
 license = "MIT OR Apache-2.0"
@@ -9,7 +9,17 @@ description = "A crate of utilities for storing in-memory timeseries data."
 readme = "README.md"
 categories = []
 keywords = []
-exclude = [".github", "CHANGELOG.md"]
+exclude = [
+    ".github/",
+    ".idea",
+    ".vscode/",
+    ".gitignore",
+    ".markdownlint.json",
+    "CHANGELOG.md",
+    "clippy.toml",
+    "rustfmt.toml",
+]
+docs = "https://docs.rs/timeless/"
 
 [lib]
 test = true

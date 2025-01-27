@@ -17,24 +17,24 @@ impl<T> DataChunk<T> {
 }
 
 /// An iterator created from a [`ChunkedData`].
-pub struct ChunkedDataIter<I: Iterator + DoubleEndedIterator> {
+pub struct ChunkedDataIter<I: Iterator> {
     iter: I,
     size: usize,
 }
 
-impl<T, I: Iterator<Item = T> + DoubleEndedIterator> Iterator for ChunkedDataIter<I> {
+impl<T, I: Iterator<Item = T>> Iterator for ChunkedDataIter<I> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
-}
 
-impl<T, I: Iterator<Item = T> + DoubleEndedIterator> ExactSizeIterator for ChunkedDataIter<I> {
-    fn len(&self) -> usize {
-        self.size
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.size, Some(self.size))
     }
 }
+
+impl<T, I: Iterator<Item = T>> ExactSizeIterator for ChunkedDataIter<I> {}
 
 impl<T, I: Iterator<Item = T> + DoubleEndedIterator> DoubleEndedIterator for ChunkedDataIter<I> {
     fn next_back(&mut self) -> Option<Self::Item> {
@@ -91,28 +91,51 @@ impl<D> ChunkedData<D> {
     ///
     /// This is meant to be used alongside a slice of time values.
     ///
-    /// Note this will return [`None`] if the base slice's length is smaller than that of the [`ChunkedData`].
+    /// Note this will return the minimum of the number of elements in either the base slice or the [`ChunkedData`].
     pub fn iter_along_base<'a, T>(
         &'a self, base_slice: &'a [T],
-    ) -> Option<ChunkedDataIter<impl DoubleEndedIterator<Item = (&'a T, &'a D)>>> {
-        if base_slice.len() < self.length() {
-            return None;
-        }
+    ) -> ChunkedDataIter<impl DoubleEndedIterator<Item = (&'a T, &'a D)>> {
+        let size = if base_slice.len() < self.length() {
+            self.num_elements() - (self.length() - base_slice.len())
+        } else {
+            self.num_elements()
+        };
 
-        let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
+        println!(
+            "num elements: {}, internal length: {}, base len: {} --- final size: {}",
+            self.num_elements(),
+            self.length(),
+            base_slice.len(),
+            size
+        );
+
         let iter = self.chunks.iter().flat_map(move |dc| {
             let start = dc.start_offset;
+            let to_take = base_slice.len() - start; // Take at most all the values in the chunk, or up to the number of base element indices.
 
-            dc.data.iter().enumerate().map(move |(offset, datum)| {
-                let actual_index = start + offset;
-                let base = &base_slice[actual_index];
+            dc.data
+                .iter()
+                .take(to_take)
+                .enumerate()
+                .map(move |(offset, datum)| {
+                    let actual_index = start + offset;
+                    let base = &base_slice[actual_index];
 
-                (base, datum)
-            })
+                    (base, datum)
+                })
         });
 
-        Some(ChunkedDataIter { iter, size })
+        ChunkedDataIter { iter, size }
     }
+
+    // /// Similar to [`ChunkedData::iter_along_base`], but in _reverse_.
+    // ///
+    // /// Note this will return the minimum of the number of elements in either the base slice or the [`ChunkedData`].
+    // pub fn reverse_iter_along_base<'a, T>(
+    //     &'a self, base_slice: &'a [T],
+    // ) -> ChunkedDataIter<impl DoubleEndedIterator<Item = (&'a T, &'a D)>> {
+    //     todo!()
+    // }
 
     /// Return how many elements actually are stored in the [`ChunkedData`].
     pub fn num_elements(&self) -> usize {
@@ -453,5 +476,59 @@ mod tests {
                 .rev()
                 .collect::<Vec<_>>(),
         );
+    }
+
+    #[test]
+    fn base_slice_simple() {
+        let mut data = ChunkedData::default();
+        data.push(1);
+        data.push(2);
+        data.push(3);
+
+        let base_slice = [1, 2, 3, 4, 5];
+
+        // Test with a larger base slice
+        assert_eq!(data.iter_along_base(&base_slice).len(), 3);
+
+        // Test with an exact base slice
+        assert_eq!(data.iter_along_base(&base_slice[0..3]).len(), 3);
+
+        // Test with a smaller base slice
+        assert_eq!(data.iter_along_base(&base_slice[0..2]).len(), 2);
+        assert_eq!(data.iter_along_base(&base_slice[0..1]).len(), 1);
+        assert_eq!(data.iter_along_base(&base_slice[0..0]).len(), 0);
+    }
+
+    #[test]
+    fn base_slice_chunked() {
+        let mut data = ChunkedData::default();
+        data.push(1);
+        data.push(2);
+        data.push(3);
+        data.try_push(None);
+        data.try_push(None);
+        data.try_push(None);
+        data.push(7);
+        data.push(8);
+        data.push(9);
+
+        let base_slice = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+        // Test with a larger base slice
+        assert_eq!(data.iter_along_base(&base_slice).len(), 6);
+
+        // Test with an exact base slice
+        assert_eq!(data.iter_along_base(&base_slice[0..9]).len(), 6);
+
+        // Test with a smaller base slice
+        assert_eq!(data.iter_along_base(&base_slice[0..8]).len(), 5);
+        assert_eq!(data.iter_along_base(&base_slice[0..7]).len(), 4);
+        assert_eq!(data.iter_along_base(&base_slice[0..6]).len(), 3);
+        assert_eq!(data.iter_along_base(&base_slice[0..5]).len(), 3);
+        assert_eq!(data.iter_along_base(&base_slice[0..4]).len(), 3);
+        assert_eq!(data.iter_along_base(&base_slice[0..3]).len(), 3);
+        assert_eq!(data.iter_along_base(&base_slice[0..2]).len(), 2);
+        assert_eq!(data.iter_along_base(&base_slice[0..1]).len(), 1);
+        assert_eq!(data.iter_along_base(&base_slice[0..0]).len(), 0);
     }
 }
