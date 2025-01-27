@@ -17,24 +17,24 @@ impl<T> DataChunk<T> {
 }
 
 /// An iterator created from a [`ChunkedData`].
-pub struct ChunkedDataIter<I: Iterator + DoubleEndedIterator> {
+pub struct ChunkedDataIter<I: Iterator> {
     iter: I,
-    size: usize,
+    size: usize, // TODO: We can probably store this as a `OnceCell` instead to avoid computing it if we don't need it.
 }
 
-impl<T, I: Iterator<Item = T> + DoubleEndedIterator> Iterator for ChunkedDataIter<I> {
+impl<T, I: Iterator<Item = T>> Iterator for ChunkedDataIter<I> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
-}
 
-impl<T, I: Iterator<Item = T> + DoubleEndedIterator> ExactSizeIterator for ChunkedDataIter<I> {
-    fn len(&self) -> usize {
-        self.size
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.size, Some(self.size))
     }
 }
+
+impl<T, I: Iterator<Item = T>> ExactSizeIterator for ChunkedDataIter<I> {}
 
 impl<T, I: Iterator<Item = T> + DoubleEndedIterator> DoubleEndedIterator for ChunkedDataIter<I> {
     fn next_back(&mut self) -> Option<Self::Item> {
@@ -91,27 +91,52 @@ impl<D> ChunkedData<D> {
     ///
     /// This is meant to be used alongside a slice of time values.
     ///
-    /// Note this will return [`None`] if the base slice's length is smaller than that of the [`ChunkedData`].
+    /// Note this will return the minimum of the number of elements in either the base slice or the [`ChunkedData`].
     pub fn iter_along_base<'a, T>(
         &'a self, base_slice: &'a [T],
-    ) -> Option<ChunkedDataIter<impl DoubleEndedIterator<Item = (&'a T, &'a D)>>> {
-        if base_slice.len() < self.length() {
-            return None;
-        }
+    ) -> ChunkedDataIter<impl DoubleEndedIterator<Item = (&'a T, &'a D)>> {
+        let size = if base_slice.len() >= self.length() {
+            // Happy path. We return at most the number of stored elements!
+            self.num_elements()
+        } else {
+            // Uh oh. We need a bit more logic around this step.
 
-        let size = self.chunks.iter().map(|dc| dc.data.len()).sum();
+            let mut num_returned_elements = 0;
+
+            for dc in self.chunks.iter() {
+                let start = dc.start_offset;
+                let end = dc.start_offset + dc.data.len();
+
+                if base_slice.len() > end {
+                    num_returned_elements += dc.data.len();
+                } else if base_slice.len() < start {
+                    break;
+                } else {
+                    // It's somewhere in the middle.
+                    num_returned_elements += base_slice.len() - start;
+                }
+            }
+
+            num_returned_elements
+        };
+
         let iter = self.chunks.iter().flat_map(move |dc| {
             let start = dc.start_offset;
+            let to_take = base_slice.len().saturating_sub(start); // Take at most all the values in the chunk, or up to the number of base element indices.
 
-            dc.data.iter().enumerate().map(move |(offset, datum)| {
-                let actual_index = start + offset;
-                let base = &base_slice[actual_index];
+            dc.data
+                .iter()
+                .take(to_take)
+                .enumerate()
+                .map(move |(offset, datum)| {
+                    let actual_index = start + offset;
+                    let base = &base_slice[actual_index];
 
-                (base, datum)
-            })
+                    (base, datum)
+                })
         });
 
-        Some(ChunkedDataIter { iter, size })
+        ChunkedDataIter { iter, size }
     }
 
     /// Return how many elements actually are stored in the [`ChunkedData`].
@@ -453,5 +478,82 @@ mod tests {
                 .rev()
                 .collect::<Vec<_>>(),
         );
+    }
+
+    #[track_caller]
+    fn base_slice_test(
+        data: &ChunkedData<u32>, base_slice: &[u32], expected: &[(u32, u32)],
+        base_slice_index: usize, expected_slice_index: usize,
+    ) {
+        let base_slice = &base_slice[0..base_slice_index];
+
+        assert_eq!(
+            data.iter_along_base(base_slice).len(),
+            expected_slice_index,
+            "the returned size of the iterator should match"
+        );
+        assert_eq!(
+            data.iter_along_base(base_slice)
+                .map(|(a, b)| (*a, *b))
+                .collect::<Vec<_>>(),
+            expected[0..expected_slice_index],
+            "the actual generated values should match"
+        );
+    }
+
+    #[test]
+    fn base_slice_simple() {
+        let mut data = ChunkedData::default();
+        data.push(1);
+        data.push(2);
+        data.push(3);
+
+        let base_slice = [1, 2, 3, 4, 5];
+        let expected = [(1, 1), (2, 2), (3, 3)];
+
+        // Test with a larger base slice
+        base_slice_test(&data, &base_slice, &expected, 5, 3);
+
+        // Test with an exact base slice
+        base_slice_test(&data, &base_slice, &expected, 3, 3);
+
+        // Test with a smaller base slice
+        base_slice_test(&data, &base_slice, &expected, 2, 2);
+        base_slice_test(&data, &base_slice, &expected, 1, 1);
+        base_slice_test(&data, &base_slice, &expected, 0, 0);
+    }
+
+    #[test]
+    fn base_slice_chunked() {
+        let mut data = ChunkedData::default();
+        data.push(1);
+        data.push(2);
+        data.push(3);
+        data.try_push(None);
+        data.try_push(None);
+        data.try_push(None);
+        data.push(7);
+        data.push(8);
+        data.push(9);
+
+        let base_slice = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let expected = [(1, 1), (2, 2), (3, 3), (7, 7), (8, 8), (9, 9)];
+
+        // Test with a larger base slice
+        base_slice_test(&data, &base_slice, &expected, 10, 6);
+
+        // Test with an exact base slice
+        base_slice_test(&data, &base_slice, &expected, 9, 6);
+
+        // Test with a smaller base slice
+        base_slice_test(&data, &base_slice, &expected, 8, 5);
+        base_slice_test(&data, &base_slice, &expected, 7, 4);
+        base_slice_test(&data, &base_slice, &expected, 6, 3);
+        base_slice_test(&data, &base_slice, &expected, 5, 3);
+        base_slice_test(&data, &base_slice, &expected, 4, 3);
+        base_slice_test(&data, &base_slice, &expected, 3, 3);
+        base_slice_test(&data, &base_slice, &expected, 2, 2);
+        base_slice_test(&data, &base_slice, &expected, 1, 1);
+        base_slice_test(&data, &base_slice, &expected, 0, 0);
     }
 }

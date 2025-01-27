@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.14-alpha - 2025-01-26
+
+### Changes
+
+- `ChunkedData::iter_along_base` now returns elements if the base time slice is smaller than the stored data.
+
 ## v0.0.13-alpha - 2025-01-25
 
 ### Changes
