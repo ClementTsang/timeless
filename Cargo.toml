@@ -2,11 +2,12 @@
 name = "timeless"
 version = "0.0.14-alpha"
 edition = "2021"
-authors = ["Clement Tsang <cjhtsang@uwaterloo.ca>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/ClementTsang/timeless"
 description = "A crate of utilities for storing in-memory timeseries data."
 readme = "README.md"
+documentation = "https://docs.rs/timeless/"
+authors = ["Clement Tsang <cjhtsang@uwaterloo.ca>"]
 categories = []
 keywords = []
 exclude = [
@@ -19,7 +20,6 @@ exclude = [
     "clippy.toml",
     "rustfmt.toml",
 ]
-docs = "https://docs.rs/timeless/"
 
 [lib]
 test = true
