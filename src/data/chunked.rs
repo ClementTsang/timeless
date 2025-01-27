@@ -128,15 +128,6 @@ impl<D> ChunkedData<D> {
         ChunkedDataIter { iter, size }
     }
 
-    // /// Similar to [`ChunkedData::iter_along_base`], but in _reverse_.
-    // ///
-    // /// Note this will return the minimum of the number of elements in either the base slice or the [`ChunkedData`].
-    // pub fn reverse_iter_along_base<'a, T>(
-    //     &'a self, base_slice: &'a [T],
-    // ) -> ChunkedDataIter<impl DoubleEndedIterator<Item = (&'a T, &'a D)>> {
-    //     todo!()
-    // }
-
     /// Return how many elements actually are stored in the [`ChunkedData`].
     pub fn num_elements(&self) -> usize {
         self.chunks.iter().map(|dc| dc.data.len()).sum()
@@ -478,6 +469,27 @@ mod tests {
         );
     }
 
+    #[track_caller]
+    fn base_slice_test(
+        data: &ChunkedData<u32>, base_slice: &[u32], expected: &[(u32, u32)],
+        base_slice_index: usize, expected_slice_index: usize,
+    ) {
+        let base_slice = &base_slice[0..base_slice_index];
+
+        assert_eq!(
+            data.iter_along_base(&base_slice).len(),
+            expected_slice_index,
+            "the returned size of the iterator should match"
+        );
+        assert_eq!(
+            data.iter_along_base(&base_slice)
+                .map(|(a, b)| (*a, *b))
+                .collect::<Vec<_>>(),
+            expected[0..expected_slice_index],
+            "the actual generated values should match"
+        );
+    }
+
     #[test]
     fn base_slice_simple() {
         let mut data = ChunkedData::default();
@@ -486,17 +498,18 @@ mod tests {
         data.push(3);
 
         let base_slice = [1, 2, 3, 4, 5];
+        let expected = [(1, 1), (2, 2), (3, 3)];
 
         // Test with a larger base slice
-        assert_eq!(data.iter_along_base(&base_slice).len(), 3);
+        base_slice_test(&data, &base_slice, &expected, 5, 3);
 
         // Test with an exact base slice
-        assert_eq!(data.iter_along_base(&base_slice[0..3]).len(), 3);
+        base_slice_test(&data, &base_slice, &expected, 3, 3);
 
         // Test with a smaller base slice
-        assert_eq!(data.iter_along_base(&base_slice[0..2]).len(), 2);
-        assert_eq!(data.iter_along_base(&base_slice[0..1]).len(), 1);
-        assert_eq!(data.iter_along_base(&base_slice[0..0]).len(), 0);
+        base_slice_test(&data, &base_slice, &expected, 2, 2);
+        base_slice_test(&data, &base_slice, &expected, 1, 1);
+        base_slice_test(&data, &base_slice, &expected, 0, 0);
     }
 
     #[test]
@@ -513,22 +526,23 @@ mod tests {
         data.push(9);
 
         let base_slice = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let expected = [(1, 1), (2, 2), (3, 3), (7, 7), (8, 8), (9, 9)];
 
         // Test with a larger base slice
-        assert_eq!(data.iter_along_base(&base_slice).len(), 6);
+        base_slice_test(&data, &base_slice, &expected, 10, 6);
 
         // Test with an exact base slice
-        assert_eq!(data.iter_along_base(&base_slice[0..9]).len(), 6);
+        base_slice_test(&data, &base_slice, &expected, 9, 6);
 
         // Test with a smaller base slice
-        assert_eq!(data.iter_along_base(&base_slice[0..8]).len(), 5);
-        assert_eq!(data.iter_along_base(&base_slice[0..7]).len(), 4);
-        assert_eq!(data.iter_along_base(&base_slice[0..6]).len(), 3);
-        assert_eq!(data.iter_along_base(&base_slice[0..5]).len(), 3);
-        assert_eq!(data.iter_along_base(&base_slice[0..4]).len(), 3);
-        assert_eq!(data.iter_along_base(&base_slice[0..3]).len(), 3);
-        assert_eq!(data.iter_along_base(&base_slice[0..2]).len(), 2);
-        assert_eq!(data.iter_along_base(&base_slice[0..1]).len(), 1);
-        assert_eq!(data.iter_along_base(&base_slice[0..0]).len(), 0);
+        base_slice_test(&data, &base_slice, &expected, 8, 5);
+        base_slice_test(&data, &base_slice, &expected, 7, 4);
+        base_slice_test(&data, &base_slice, &expected, 6, 3);
+        base_slice_test(&data, &base_slice, &expected, 5, 3);
+        base_slice_test(&data, &base_slice, &expected, 4, 3);
+        base_slice_test(&data, &base_slice, &expected, 3, 3);
+        base_slice_test(&data, &base_slice, &expected, 2, 2);
+        base_slice_test(&data, &base_slice, &expected, 1, 1);
+        base_slice_test(&data, &base_slice, &expected, 0, 0);
     }
 }
