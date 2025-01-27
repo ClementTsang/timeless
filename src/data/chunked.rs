@@ -19,7 +19,7 @@ impl<T> DataChunk<T> {
 /// An iterator created from a [`ChunkedData`].
 pub struct ChunkedDataIter<I: Iterator> {
     iter: I,
-    size: usize,
+    size: usize, // TODO: We can probably store this as a `OnceCell` instead to avoid computing it if we don't need it.
 }
 
 impl<T, I: Iterator<Item = T>> Iterator for ChunkedDataIter<I> {
@@ -95,23 +95,34 @@ impl<D> ChunkedData<D> {
     pub fn iter_along_base<'a, T>(
         &'a self, base_slice: &'a [T],
     ) -> ChunkedDataIter<impl DoubleEndedIterator<Item = (&'a T, &'a D)>> {
-        let size = if base_slice.len() < self.length() {
-            self.num_elements() - (self.length() - base_slice.len())
-        } else {
+        let size = if base_slice.len() >= self.length() {
+            // Happy path. We return at most the number of stored elements!
             self.num_elements()
-        };
+        } else {
+            // Uh oh. We need a bit more logic around this step.
 
-        println!(
-            "num elements: {}, internal length: {}, base len: {} --- final size: {}",
-            self.num_elements(),
-            self.length(),
-            base_slice.len(),
-            size
-        );
+            let mut num_returned_elements = 0;
+
+            for dc in self.chunks.iter() {
+                let start = dc.start_offset;
+                let end = dc.start_offset + dc.data.len();
+
+                if base_slice.len() > end {
+                    num_returned_elements += dc.data.len();
+                } else if base_slice.len() < start {
+                    break;
+                } else {
+                    // It's somewhere in the middle.
+                    num_returned_elements += base_slice.len() - start;
+                }
+            }
+
+            num_returned_elements
+        };
 
         let iter = self.chunks.iter().flat_map(move |dc| {
             let start = dc.start_offset;
-            let to_take = base_slice.len() - start; // Take at most all the values in the chunk, or up to the number of base element indices.
+            let to_take = base_slice.len().saturating_sub(start); // Take at most all the values in the chunk, or up to the number of base element indices.
 
             dc.data
                 .iter()
@@ -477,12 +488,12 @@ mod tests {
         let base_slice = &base_slice[0..base_slice_index];
 
         assert_eq!(
-            data.iter_along_base(&base_slice).len(),
+            data.iter_along_base(base_slice).len(),
             expected_slice_index,
             "the returned size of the iterator should match"
         );
         assert_eq!(
-            data.iter_along_base(&base_slice)
+            data.iter_along_base(base_slice)
                 .map(|(a, b)| (*a, *b))
                 .collect::<Vec<_>>(),
             expected[0..expected_slice_index],
