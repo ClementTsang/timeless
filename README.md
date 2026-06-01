@@ -2,7 +2,7 @@
   <h1>timeless</h1>
 
   <p>
-    A crate of utilities for storing in-memory timeseries data.
+    A crate of utilities for storing in-memory time series data.
   </p>
 
 [<img src="https://img.shields.io/crates/v/timeless.svg?style=flat-square" alt="crates.io link">](https://crates.io/crates/timeless)
