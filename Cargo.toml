@@ -1,7 +1,7 @@
 [package]
 name = "timeless"
-version = "0.0.14-alpha"
-edition = "2021"
+version = "0.0.15-alpha"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/ClementTsang/timeless"
 description = "A crate of utilities for storing in-memory timeseries data."
