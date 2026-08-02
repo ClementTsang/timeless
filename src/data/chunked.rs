@@ -1,4 +1,4 @@
-//! This is code responsible for possibly chunked data.
+//! This is code responsible for possibly-chunked data.
 
 #[derive(Clone, Default, Debug)]
 struct DataChunk<T> {

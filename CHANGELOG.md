@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file. The format 
 
 Versioning for this project is based on [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.0 - 2026-08-02
+
+Version bump to fix a bit of doc wording + move it to first minor version.
+
+## v0.0.1 - 2026-07-21
+
+### Changes
+
+Simple version bump to bring it out of "alpha".
+
+## v0.0.15-alpha - 2026-05-31
+
+### Changes
+
+- Bump Rust version to 2024.
+
 ## v0.0.14-alpha - 2025-01-26
 
 ### Changes
