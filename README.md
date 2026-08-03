@@ -13,8 +13,8 @@
 ## Usage
 
 **Note**: This is a very experimental crate written mainly for use in
-[bottom](https://github.com/ClementTsang/bottom), and will currently
-change a lot. You've been warned.
+[bottom](https://github.com/ClementTsang/bottom), and may change a lot
+(though I will try to stick to semver properly). You've been warned.
 
 ## Licensing
 
