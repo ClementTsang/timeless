@@ -16,6 +16,12 @@
 [bottom](https://github.com/ClementTsang/bottom), and may change a lot
 (though I will try to stick to semver properly). You've been warned.
 
+You can use this by adding `timeless` to your `Cargo.toml`:
+
+```toml
+timeless = "0.1.0"
+```
+
 ## Licensing
 
 This crate is dual-licensed under Apache 2.0 and MIT.
